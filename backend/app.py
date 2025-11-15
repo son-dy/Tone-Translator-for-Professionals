@@ -28,7 +28,7 @@ GEMINI_MODEL_NAME = "gemini-2.5-flash" # 최신 Flash 모델 사용 권장
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    # 여기에 Netlify 배포 주소를 추가해야 합니다. 예: "https://your-site.netlify.app"
+    "https://fastidious-froyo-2519c1.netlify.app"
 ]
 
 app.add_middleware(
