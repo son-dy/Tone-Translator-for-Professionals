@@ -30,9 +30,9 @@ function App() {
 
     const convertText = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-        const response = await fetch(`${apiUrl}/convert`, {
+        const response = await fetch(`${apiUrl}/api/convert`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ original_text: originalText, style }),
@@ -62,9 +62,9 @@ function App() {
 
     const extractKeywords = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-        const keywordResponse = await fetch(`${apiUrl}/keywords`, {
+        const keywordResponse = await fetch(`${apiUrl}/api/keywords`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: trimmedText }),
@@ -83,9 +83,7 @@ function App() {
       }
     };
 
-    // 두 비동기 작업을 동시에 실행
-    convertText();
-    extractKeywords();
+    Promise.all([convertText(), extractKeywords()]); 
   };
 
   // 스타일이 변경될 때 자동으로 변환되도록 useEffect 유지
