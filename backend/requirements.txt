@@ -3,4 +3,3 @@ uvicorn[standard]
 gunicorn
 python-dotenv
 google-generativeai
-ollama

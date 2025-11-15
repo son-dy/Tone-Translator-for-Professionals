@@ -30,4 +30,4 @@ EXPOSE 5000
 # 8. 컨테이너가 시작될 때 실행할 명령어
 # gunicorn을 사용해 app.py 파일 안에 있는 app 객체를 실행함
 # FastAPI는 uvicorn 워커를 사용하도록 지정해야함
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:${PORT}", "app:app"]
+CMD gunicorn -k uvicorn.workers.UvicornWorker --bind "0.0.0.0:${PORT:-5000}" app:app
