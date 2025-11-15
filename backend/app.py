@@ -6,7 +6,6 @@ from typing import AsyncGenerator
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
-import ollama
 
 # .env 파일에서 환경 변수 로드
 load_dotenv()
@@ -14,18 +13,14 @@ load_dotenv()
 # FastAPI 앱 생성
 app = FastAPI()
 
-# API 키 및 모델 설정
+# API 키 설정
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY 환경 변수가 설정되지 않았습니다, env 파일을 확인")
 genai.configure(api_key=GEMINI_API_KEY)
 
-# 사용할 모델 
-GEMINI_MODEL_NAME = "gemini-2.5-flash" # 속도에 최적화된 모델로 변경하여 테스트
-OLLAMA_MODEL_NAME = "exaone3.5:2.4b" # 키워드 추출용 로컬 모델
-
-# LLM 클라이언트 초기화
-ollama_client = ollama.AsyncClient()
+# 사용할 모델
+GEMINI_MODEL_NAME = "gemini-2.5-flash" # 최신 Flash 모델 사용 권장
 
 # CORS 설정 
 # 현재 React 개발 서버 주소인 http://localhost:5173 등을 추가
@@ -33,6 +28,7 @@ ollama_client = ollama.AsyncClient()
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    # 여기에 Netlify 배포 주소를 추가해야 합니다. 예: "https://your-site.netlify.app"
 ]
 
 app.add_middleware(
@@ -87,7 +83,6 @@ async def convert_tone_with_gemini_stream(text: str, style: str) -> AsyncGenerat
 
     try:
         # Gemini 모델 생성 및 스트리밍 응답 생성
-        model = genai.GenerativeModel(GEMINI_MODEL_NAME)
         response_stream = await model.generate_content_async(prompt, stream=True)
 
         async for chunk in response_stream:
@@ -98,19 +93,18 @@ async def convert_tone_with_gemini_stream(text: str, style: str) -> AsyncGenerat
         print(f"Gemini API 호출 중 오류 발생: {e}")
         yield "오류가 발생했습니다. 서버 로그를 확인해주세요."
 
-async def extract_keywords_with_ollama(text: str) -> str:
-    """Ollama를 사용하여 주어진 텍스트에서 핵심 키워드를 추출합니다."""
+async def extract_keywords_with_gemini(text: str) -> str:
+    """Gemini를 사용하여 주어진 텍스트에서 핵심 키워드를 추출합니다."""
     if not text.strip():
         return ""
 
-    # 모델이 역할을 더 잘 이해하고 좋은 품질의 키워드를 생성하도록 프롬프트를 개선합니다.
     prompt = f"""[역할]
 당신은 주어진 텍스트의 핵심 내용을 파악하여 명사형 키워드로 요약하는 전문가입니다.
 
 [지시]
-1. 아래 '텍스트'의 핵심 내용을 나타내는 키워드를 5개 이내로 추출하세요.
-2. 각 키워드는 쉼표(,)로 구분된 하나의 목록으로 만드세요.
-3. 키워드 외에 다른 설명이나 줄바꿈을 절대 추가하지 마세요.
+1. 아래 '텍스트'의 핵심 내용을 가장 잘 나타내는 한국어 명사형 키워드를 5개 이내로 추출하세요.
+2. 추출된 키워드들을 쉼표(,)로 구분된 단일 문자열로 만드세요. (예: 키워드1, 키워드2, 키워드3)
+3. 결과에는 키워드 목록 외에 어떤 설명, 줄바꿈, 특수문자도 포함하지 마세요.
 
 [추출 예시]
 * 텍스트: 김 대리님, 어제 논의했던 자료 관련하여, 혹시 오늘 오후 3시까지 전달해 주실 수 있는지 여쭤봅니다.
@@ -121,12 +115,12 @@ async def extract_keywords_with_ollama(text: str) -> str:
 
 [키워드]
 """
-    # 매번 클라이언트를 생성하는 대신, 앱 시작 시 생성된 클라이언트를 재사용하여 성능을 향상
-    response = await ollama_client.chat(
-        model=OLLAMA_MODEL_NAME,
-        messages=[{'role': 'user', 'content': prompt}]
-    )
-    return response['message']['content'].strip()
+    try:
+        response = await model.generate_content_async(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"Gemini 키워드 추출 중 오류 발생: {e}")
+        return "키워드 추출 실패"
 
 # 스트리밍 텍스트 변환을 위한 API 엔드포인트
 # 프론트엔드에서 호출하는 경로(/api/convert)에 맞게 수정
@@ -138,8 +132,8 @@ async def convert_api(request: TextRequest):
 # 키워드 추출을 위한 API 엔드포인트
 @app.post("/api/keywords")
 async def keywords_api(request: KeywordRequest):
-    """Ollama를 사용하여 텍스트에서 키워드를 추출하는 API"""
-    keywords = await extract_keywords_with_ollama(request.text)
+    """Gemini를 사용하여 텍스트에서 키워드를 추출하는 API"""
+    keywords = await extract_keywords_with_gemini(request.text)
     return {"keywords": keywords}
 
 # python app.py으로 직접 실행할 때 uvicorn 서버를 구동하기 위한 코드
