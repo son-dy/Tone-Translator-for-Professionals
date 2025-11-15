@@ -52,7 +52,11 @@ function App() {
         }
       } catch (error) {
         if (error.name !== "AbortError") {
-          setConvertedText("오류가 발생, 서버를 확인 바람");
+          // AbortError와 정상 스트림 종료 에러(Failed to read the response body)만 무시
+          if (error.name !== "AbortError" && !error.message.includes("Failed to read the response body")) {
+            console.error("Conversion Error:", error);
+            setConvertedText("오류가 발생, 서버를 확인 바람");
+          }
         }
       } finally {
         // 텍스트 변환이 끝나면 (성공하든 실패하든) 로딩 상태 해제
@@ -70,11 +74,16 @@ function App() {
           body: JSON.stringify({ text: trimmedText }),
           signal: controller.signal,
         });
-        if (!keywordResponse.ok) throw new Error("Keyword extraction failed");
+        if (!keywordResponse.ok) {;
         const { keywords } = await keywordResponse.json();
         setKeywords(keywords);
-      } catch (error) {
+        return;
+      }
+      const {keywords} = await keywordResponse.json();
+      setKeywords(keywords); 
+    } catch (error) {
         if (error.name !== "AbortError") {
+          console.error("Keyword Extraction Error:", error);
           setKeywords("키워드 추출 실패");
         }
       } finally {
