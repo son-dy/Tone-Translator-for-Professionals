@@ -18,7 +18,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY 환경 변수가 설정되지 않았습니다, env 파일을 확인")
 genai.configure(api_key=GEMINI_API_KEY)
-
+model = genai.GenerativeModel(GEMINI_MODEL_NAME)
 # 사용할 모델
 GEMINI_MODEL_NAME = "gemini-2.5-flash" # 최신 Flash 모델 사용 권장
 
